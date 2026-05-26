@@ -1,13 +1,29 @@
 import { Router, type Request, type Response } from 'express';
 import { requireJwt, requireRole } from '../middleware/auth';
-import { Submission } from '../entities/submission.entity';
+import { Submission, type SubmissionStatus } from '../entities/submission.entity';
 import {
   createDraftForVendor,
   findSubmissionOwnedBy,
   getOrCreateVendorForUser,
+  listSubmissionsForVendor,
   updateDraft,
 } from '../services/submission.service';
 import { validateFormatFields } from '../services/format-validators';
+
+const SUBMISSION_STATUSES: readonly SubmissionStatus[] = [
+  'Draft',
+  'In-Process',
+  'Completed',
+  'Rejected',
+  'Modification-Required',
+];
+
+function parseStatusFilter(value: unknown): SubmissionStatus | undefined {
+  if (typeof value !== 'string') return undefined;
+  return (SUBMISSION_STATUSES as readonly string[]).includes(value)
+    ? (value as SubmissionStatus)
+    : undefined;
+}
 
 const router = Router();
 
@@ -24,6 +40,14 @@ function serialize(s: Submission) {
     updatedAt: s.updatedAt,
   };
 }
+
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const vendor = await getOrCreateVendorForUser(userId);
+  const status = parseStatusFilter(req.query.status);
+  const rows = await listSubmissionsForVendor(vendor.id, status);
+  res.status(200).json(rows.map(serialize));
+});
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   // requireJwt has already populated req.user; requireRole('vendor') has gated this.

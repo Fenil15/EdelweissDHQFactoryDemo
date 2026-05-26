@@ -1,6 +1,17 @@
 import { AppDataSource } from '../db/data-source';
-import { Submission } from '../entities/submission.entity';
+import { Submission, type SubmissionStatus } from '../entities/submission.entity';
 import { Vendor } from '../entities/vendor.entity';
+
+export async function listSubmissionsForVendor(
+  vendorId: string,
+  status?: SubmissionStatus,
+): Promise<Submission[]> {
+  const repo = AppDataSource.getRepository(Submission);
+  return repo.find({
+    where: status ? { vendorId, status } : { vendorId },
+    order: { updatedAt: 'DESC' },
+  });
+}
 
 /**
  * Loads a submission only if it belongs to the given vendor. Returning null
