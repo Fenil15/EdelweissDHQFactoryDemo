@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -167,6 +167,128 @@ describe('SubmissionFormComponent', () => {
 
     // Indicator advanced to step 2.
     expect(fixture.nativeElement.textContent).toContain('Step 2 of 7');
+  });
+
+  it('CTA reads "Next" on early steps', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft();
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Next');
+  });
+
+  it('CTA reads "Submit" on the Review step', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    // Resume directly at the review step (index 6, currentStep 7).
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Submit');
+  });
+
+  it('clicking Submit on Review POSTs /api/submissions/:id/submit and navigates to /vendor on success', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    const navSpy = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    fixture.nativeElement.querySelector('[data-testid="next-btn"]').click();
+    fixture.detectChanges();
+
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    expect(post.request.body).toEqual({});
+    post.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'In-Process',
+      currentStep: 7,
+      formDataJson: {},
+    });
+    fixture.detectChanges();
+
+    expect(navSpy).toHaveBeenCalledWith('/vendor');
+  });
+
+  it('shows inline error and re-enables Submit when the submit request fails', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="next-btn"]').click();
+    fixture.detectChanges();
+
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    post.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const err: HTMLElement | null = fixture.nativeElement.querySelector(
+      '[data-testid="submit-error"]',
+    );
+    expect(err).toBeTruthy();
+    expect(err!.className).toContain('text-red-600');
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(false);
+  });
+
+  it('disables the Submit button while the submit request is in flight', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(false);
+
+    next.click();
+    fixture.detectChanges();
+
+    // In flight: the POST is open but not yet flushed.
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    expect(next.disabled).toBe(true);
+
+    // Clean up the open request.
+    post.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'In-Process',
+      currentStep: 7,
+      formDataJson: {},
+    });
+  });
+
+  it('disables Submit on the Review step when submissionId is null', () => {
+    TestBed.resetTestingModule();
+    setUpWithRouteId(null);
+    httpMock = TestBed.inject(HttpTestingController);
+
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    // No flushDraft — paramMap id is null, so no GET fires.
+    // Force the form to the review step.
+    fixture.componentInstance.stepIndex.set(6);
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Submit');
+    expect(next.disabled).toBe(true);
   });
 
   it('hydrates from saved currentStep when resuming a draft', () => {

@@ -110,6 +110,20 @@ describe('SubmissionService', () => {
     });
   });
 
+  it('submitDraft POSTs to /api/submissions/:id/submit with an empty body', () => {
+    service.submitDraft('s1').subscribe();
+    const req = httpMock.expectOne('/api/submissions/s1/submit');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'In-Process',
+      currentStep: 7,
+      formDataJson: {},
+    });
+  });
+
   it('submitDecision POSTs action + comments to /api/submissions/:id/decision', () => {
     service.submitDecision('s1', 'approve', 'looks good').subscribe();
     const req = httpMock.expectOne('/api/submissions/s1/decision');

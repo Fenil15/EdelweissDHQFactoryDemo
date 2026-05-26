@@ -216,6 +216,11 @@ const STEP_TITLES: Record<StepKey, string> = {
               data-testid="review-json"
               >{{ form.value | json }}</pre
             >
+            @if (submitError()) {
+              <p class="text-sm text-red-600" data-testid="submit-error">
+                {{ submitError() }}
+              </p>
+            }
           }
         }
       </form>
@@ -243,7 +248,7 @@ const STEP_TITLES: Record<StepKey, string> = {
             [disabled]="!canAdvance()"
             (click)="goNext()"
           >
-            Next
+            {{ ctaLabel() }}
           </button>
         </div>
       </div>
@@ -263,6 +268,9 @@ export class SubmissionFormComponent {
   readonly progressPct = computed(() =>
     Math.round(((this.stepIndex() + 1) / this.totalSteps) * 100),
   );
+  readonly ctaLabel = computed(() => (this.currentKey() === 'review' ? 'Submit' : 'Next'));
+  readonly submitting = signal(false);
+  readonly submitError = signal<string | null>(null);
 
   private submissionId: string | null = null;
 
@@ -318,8 +326,12 @@ export class SubmissionFormComponent {
 
   canAdvance(): boolean {
     const key = this.currentKey();
-    // `documents` and `review` have no required controls in #7.
-    if (key === 'documents' || key === 'review') return true;
+    if (key === 'review') {
+      // Block while a submit is in flight, and when we have no id to submit.
+      return !this.submitting() && this.submissionId !== null;
+    }
+    // `documents` has no required controls in #7.
+    if (key === 'documents') return true;
     const group = this.form.get(key);
     return !!group && group.valid;
   }
@@ -336,9 +348,29 @@ export class SubmissionFormComponent {
 
   goNext(): void {
     if (!this.canAdvance()) return;
+    if (this.currentKey() === 'review') {
+      this.submitReview();
+      return;
+    }
     const next = Math.min(this.totalSteps - 1, this.stepIndex() + 1);
     this.stepIndex.set(next);
     this.persistDraft(next + 1);
+  }
+
+  private submitReview(): void {
+    if (!this.submissionId) return;
+    this.submitError.set(null);
+    this.submitting.set(true);
+    this.submissions.submitDraft(this.submissionId).subscribe({
+      next: () => {
+        this.submitting.set(false);
+        this.router.navigateByUrl('/vendor');
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.submitError.set('Could not submit your application. Please try again.');
+      },
+    });
   }
 
   saveDraft(): void {
