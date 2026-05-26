@@ -1,0 +1,26 @@
+# Keep build context small and avoid leaking dev artifacts / secrets.
+**/node_modules
+**/dist
+**/.git
+**/.gitignore
+**/.env
+**/.env.*
+!**/.env.example
+
+# logs
+logs
+**/*.log
+npm-debug.log*
+
+# editor / OS
+.vscode
+.idea
+.DS_Store
+
+# project-local
+plans
+.claude
+async-jobs
+
+# uploaded blobs (dev only)
+apps/backend/uploads
