@@ -1,12 +1,13 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Submission, SubmissionService } from '../../core/submission/submission.service';
+import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.component';
 
 @Component({
   selector: 'app-vendor-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, StatusBadgeComponent],
   template: `
     <div class="max-w-3xl mx-auto p-6 space-y-6">
       <div class="flex items-center justify-between">
@@ -21,26 +22,40 @@ import { Submission, SubmissionService } from '../../core/submission/submission.
       </div>
 
       <section class="space-y-2">
-        <h2 class="text-lg font-medium">Drafts</h2>
-        @if (drafts().length === 0) {
-          <p class="text-sm text-gray-600" data-testid="no-drafts">
-            You have no drafts in progress.
+        <h2 class="text-lg font-medium">Your submissions</h2>
+        @if (submissions().length === 0) {
+          <p class="text-sm text-gray-600" data-testid="no-submissions">
+            You have no submissions yet.
           </p>
         }
         <ul class="divide-y border rounded">
-          @for (d of drafts(); track d.id) {
-            <li class="flex items-center justify-between p-3" data-testid="draft-row">
-              <div>
-                <p class="font-medium">Submission {{ d.id }}</p>
-                <p class="text-xs text-gray-600">Saved at step {{ d.currentStep }} of 7</p>
+          @for (s of submissions(); track s.id) {
+            <li class="flex items-center justify-between p-3" data-testid="submission-row">
+              <div class="flex items-center gap-3">
+                <app-status-badge [status]="s.status" />
+                <div>
+                  <p class="font-medium">Submission {{ s.id }}</p>
+                  <p class="text-xs text-gray-600">Saved at step {{ s.currentStep }} of 7</p>
+                </div>
               </div>
-              <a
-                [routerLink]="['/vendor/submissions', d.id]"
-                class="text-blue-600 underline"
-                data-testid="resume-link"
-              >
-                Resume
-              </a>
+              <div class="flex items-center gap-3">
+                <a
+                  [routerLink]="['/vendor/submissions', s.id, 'timeline']"
+                  class="text-sm text-blue-600 underline"
+                  data-testid="timeline-link"
+                >
+                  Timeline
+                </a>
+                @if (canResume(s)) {
+                  <a
+                    [routerLink]="['/vendor/submissions', s.id]"
+                    class="text-sm text-blue-600 underline"
+                    data-testid="resume-link"
+                  >
+                    Resume
+                  </a>
+                }
+              </div>
             </li>
           }
         </ul>
@@ -49,17 +64,23 @@ import { Submission, SubmissionService } from '../../core/submission/submission.
   `,
 })
 export class VendorDashboardComponent {
-  private readonly submissions = inject(SubmissionService);
+  private readonly submissionService = inject(SubmissionService);
   private readonly router = inject(Router);
 
-  readonly drafts = signal<Submission[]>([]);
+  readonly submissions = signal<Submission[]>([]);
+  // Kept for backwards-compatibility with anything that imported `drafts`.
+  readonly drafts = computed(() => this.submissions().filter((s) => s.status === 'Draft'));
 
   constructor() {
-    this.submissions.listDrafts().subscribe((rows) => this.drafts.set(rows));
+    this.submissionService.list({}).subscribe((rows) => this.submissions.set(rows));
+  }
+
+  canResume(s: Submission): boolean {
+    return s.status === 'Draft' || s.status === 'Modification-Required';
   }
 
   startNew(): void {
-    this.submissions.createDraft().subscribe((s) => {
+    this.submissionService.createDraft().subscribe((s) => {
       this.router.navigate(['/vendor/submissions', s.id]);
     });
   }
