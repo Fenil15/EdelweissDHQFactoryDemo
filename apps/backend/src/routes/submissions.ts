@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express';
 import { requireJwt, requireRole } from '../middleware/auth';
 import { Submission, type SubmissionStatus } from '../entities/submission.entity';
 import { AppDataSource } from '../db/data-source';
+import { Vendor } from '../entities/vendor.entity';
 import {
   createDraftForVendor,
   findSubmissionOwnedBy,
@@ -118,16 +119,28 @@ router.post('/', requireRole('vendor'), async (req: Request, res: Response): Pro
 
 router.get(
   '/:id',
-  requireRole('vendor'),
   async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    const role = req.user!.role;
     const userId = req.user!.userId;
-    const vendor = await getOrCreateVendorForUser(userId);
-    const submission = await findSubmissionOwnedBy(req.params.id, vendor.id);
+    if (role === 'vendor') {
+      const vendor = await getOrCreateVendorForUser(userId);
+      const submission = await findSubmissionOwnedBy(req.params.id, vendor.id);
+      if (!submission) {
+        res.status(404).json({ error: 'not_found' });
+        return;
+      }
+      res.status(200).json(serialize(submission, vendor.companyName));
+      return;
+    }
+    // checker / admin: read any submission with vendorName attached.
+    const repo = AppDataSource.getRepository(Submission);
+    const submission = await repo.findOneBy({ id: req.params.id });
     if (!submission) {
       res.status(404).json({ error: 'not_found' });
       return;
     }
-    res.status(200).json(serialize(submission));
+    const vendor = await AppDataSource.getRepository(Vendor).findOneBy({ id: submission.vendorId });
+    res.status(200).json(serialize(submission, vendor?.companyName ?? null));
   },
 );
 

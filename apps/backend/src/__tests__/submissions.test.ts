@@ -118,7 +118,7 @@ describe('GET /api/submissions/:id', () => {
     expect(res.status).toBe(404);
   });
 
-  it('admin role gets 403 (role gate, not 404)', async () => {
+  it('admin role can read any submission (cross-vendor access)', async () => {
     const app = createApp();
     const { user: vendorUser } = await seedVendor();
     const userRepo = AppDataSource.getRepository(User);
@@ -135,7 +135,8 @@ describe('GET /api/submissions/:id', () => {
     const res = await request(app)
       .get(`/api/submissions/${id}`)
       .set('Authorization', `Bearer ${adminToken}`);
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id, status: 'Draft' });
   });
 
   it('unknown id (well-formed uuid) returns 404 for a vendor', async () => {
