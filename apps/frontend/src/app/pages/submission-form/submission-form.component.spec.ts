@@ -243,6 +243,51 @@ describe('SubmissionFormComponent', () => {
     expect(next.disabled).toBe(false);
   });
 
+  it('disables the Submit button while the submit request is in flight', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(false);
+
+    next.click();
+    fixture.detectChanges();
+
+    // In flight: the POST is open but not yet flushed.
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    expect(next.disabled).toBe(true);
+
+    // Clean up the open request.
+    post.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'In-Process',
+      currentStep: 7,
+      formDataJson: {},
+    });
+  });
+
+  it('disables Submit on the Review step when submissionId is null', () => {
+    TestBed.resetTestingModule();
+    setUpWithRouteId(null);
+    httpMock = TestBed.inject(HttpTestingController);
+
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    // No flushDraft — paramMap id is null, so no GET fires.
+    // Force the form to the review step.
+    fixture.componentInstance.stepIndex.set(6);
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Submit');
+    expect(next.disabled).toBe(true);
+  });
+
   it('hydrates from saved currentStep when resuming a draft', () => {
     const fixture = TestBed.createComponent(SubmissionFormComponent);
     fixture.detectChanges();
