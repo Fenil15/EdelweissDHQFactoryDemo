@@ -31,6 +31,9 @@ export class User {
   @Column({ type: 'timestamptz', nullable: true })
   lockedUntil!: Date | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  invitationToken!: string | null;
+
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 
