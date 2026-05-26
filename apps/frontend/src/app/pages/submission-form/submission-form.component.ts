@@ -326,8 +326,12 @@ export class SubmissionFormComponent {
 
   canAdvance(): boolean {
     const key = this.currentKey();
-    // `documents` and `review` have no required controls in #7.
-    if (key === 'documents' || key === 'review') return true;
+    if (key === 'review') {
+      // Block while a submit is in flight, and when we have no id to submit.
+      return !this.submitting() && this.submissionId !== null;
+    }
+    // `documents` has no required controls in #7.
+    if (key === 'documents') return true;
     const group = this.form.get(key);
     return !!group && group.valid;
   }

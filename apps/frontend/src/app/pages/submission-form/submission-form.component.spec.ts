@@ -249,6 +249,9 @@ describe('SubmissionFormComponent', () => {
     flushDraft({ currentStep: 7 });
     fixture.detectChanges();
 
+    const router = TestBed.inject(Router);
+    jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
     const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
     expect(next.disabled).toBe(false);
 
