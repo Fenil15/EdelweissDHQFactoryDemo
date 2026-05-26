@@ -216,6 +216,11 @@ const STEP_TITLES: Record<StepKey, string> = {
               data-testid="review-json"
               >{{ form.value | json }}</pre
             >
+            @if (submitError()) {
+              <p class="text-sm text-red-600" data-testid="submit-error">
+                {{ submitError() }}
+              </p>
+            }
           }
         }
       </form>
@@ -264,6 +269,8 @@ export class SubmissionFormComponent {
     Math.round(((this.stepIndex() + 1) / this.totalSteps) * 100),
   );
   readonly ctaLabel = computed(() => (this.currentKey() === 'review' ? 'Submit' : 'Next'));
+  readonly submitting = signal(false);
+  readonly submitError = signal<string | null>(null);
 
   private submissionId: string | null = null;
 
@@ -348,9 +355,16 @@ export class SubmissionFormComponent {
 
   private submitReview(): void {
     if (!this.submissionId) return;
+    this.submitError.set(null);
+    this.submitting.set(true);
     this.submissions.submitDraft(this.submissionId).subscribe({
       next: () => {
+        this.submitting.set(false);
         this.router.navigateByUrl('/vendor');
+      },
+      error: () => {
+        this.submitting.set(false);
+        this.submitError.set('Could not submit your application. Please try again.');
       },
     });
   }
