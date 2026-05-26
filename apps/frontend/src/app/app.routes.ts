@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
+import { roleGuard } from './core/auth/role.guard';
 
 export const routes: Routes = [
   {
@@ -27,16 +28,32 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'checker',
+    path: 'vendor/submissions/:id/timeline',
     canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/submission-timeline/submission-timeline.component').then(
+        (m) => m.SubmissionTimelineComponent,
+      ),
+  },
+  {
+    path: 'checker',
+    canActivate: [authGuard, roleGuard(['checker', 'admin'])],
     loadComponent: () =>
       import('./pages/checker-dashboard/checker-dashboard.component').then(
         (m) => m.CheckerDashboardComponent,
       ),
   },
   {
+    path: 'checker/:id',
+    canActivate: [authGuard, roleGuard(['checker', 'admin'])],
+    loadComponent: () =>
+      import('./pages/checker-submission-detail/checker-submission-detail.component').then(
+        (m) => m.CheckerSubmissionDetailComponent,
+      ),
+  },
+  {
     path: 'admin',
-    canActivate: [authGuard],
+    canActivate: [authGuard, roleGuard(['admin'])],
     loadComponent: () =>
       import('./pages/admin-dashboard/admin-dashboard.component').then(
         (m) => m.AdminDashboardComponent,
@@ -44,7 +61,7 @@ export const routes: Routes = [
   },
   {
     path: 'audit',
-    canActivate: [authGuard],
+    canActivate: [authGuard, roleGuard(['admin'])],
     loadComponent: () =>
       import('./pages/audit-log/audit-log.component').then((m) => m.AuditLogComponent),
   },
