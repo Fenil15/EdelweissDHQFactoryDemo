@@ -89,4 +89,15 @@ describe('LoginComponent', () => {
   it('admin role → /admin', async () => {
     await runFlow('admin', '/admin');
   });
+
+  it('renders the primary "Send OTP" button with the Edelweiss brand color', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    fixture.detectChanges();
+
+    const button: HTMLButtonElement = fixture.nativeElement.querySelector(
+      '[data-testid="request-otp-btn"]',
+    );
+    expect(button).toBeTruthy();
+    expect(button.className).toContain('bg-brand');
+  });
 });
