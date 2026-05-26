@@ -19,6 +19,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'vendor/submissions/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/submission-form/submission-form.component').then(
+        (m) => m.SubmissionFormComponent,
+      ),
+  },
+  {
     path: 'checker',
     canActivate: [authGuard],
     loadComponent: () =>

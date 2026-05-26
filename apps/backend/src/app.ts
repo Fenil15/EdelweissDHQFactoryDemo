@@ -3,6 +3,7 @@ import healthRouter from './routes/health';
 import authRouter from './routes/auth';
 import { documentsRouter, submissionDocumentsRouter } from './routes/documents';
 import { ensureStorageRootExists } from './services/document.service';
+import submissionsRouter from './routes/submissions';
 
 export function createApp(): Express {
   ensureStorageRootExists();
@@ -12,5 +13,6 @@ export function createApp(): Express {
   app.use('/api/auth', authRouter);
   app.use('/api/submissions/:id/documents', submissionDocumentsRouter);
   app.use('/api/documents', documentsRouter);
+  app.use('/api/submissions', submissionsRouter);
   return app;
 }
