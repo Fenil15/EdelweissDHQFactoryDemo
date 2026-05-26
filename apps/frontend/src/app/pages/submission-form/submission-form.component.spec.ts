@@ -218,6 +218,31 @@ describe('SubmissionFormComponent', () => {
     expect(navSpy).toHaveBeenCalledWith('/vendor');
   });
 
+  it('shows inline error and re-enables Submit when the submit request fails', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="next-btn"]').click();
+    fixture.detectChanges();
+
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    post.flush({ message: 'boom' }, { status: 500, statusText: 'Server Error' });
+    fixture.detectChanges();
+
+    const err: HTMLElement | null = fixture.nativeElement.querySelector(
+      '[data-testid="submit-error"]',
+    );
+    expect(err).toBeTruthy();
+    expect(err!.className).toContain('text-red-600');
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(false);
+  });
+
   it('hydrates from saved currentStep when resuming a draft', () => {
     const fixture = TestBed.createComponent(SubmissionFormComponent);
     fixture.detectChanges();
