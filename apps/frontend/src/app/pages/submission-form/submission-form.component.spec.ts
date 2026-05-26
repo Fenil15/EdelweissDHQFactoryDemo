@@ -79,4 +79,55 @@ describe('SubmissionFormComponent', () => {
     expect(next).toBeTruthy();
     expect(next.disabled).toBe(true);
   });
+
+  it('invalid PAN keeps Next disabled and shows an inline error', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft();
+    fixture.detectChanges();
+
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="companyName-input"]',
+    );
+    const panInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="panNumber-input"]',
+    );
+    nameInput.value = 'Acme';
+    nameInput.dispatchEvent(new Event('input'));
+    panInput.value = 'INVALID';
+    panInput.dispatchEvent(new Event('input'));
+    panInput.dispatchEvent(new Event('blur'));
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(true);
+
+    const err: HTMLElement | null = fixture.nativeElement.querySelector(
+      '[data-testid="panNumber-error"]',
+    );
+    expect(err).toBeTruthy();
+    expect(err!.textContent).toContain('Invalid PAN format');
+  });
+
+  it('valid PAN + companyName enables Next', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft();
+    fixture.detectChanges();
+
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="companyName-input"]',
+    );
+    const panInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="panNumber-input"]',
+    );
+    nameInput.value = 'Acme';
+    nameInput.dispatchEvent(new Event('input'));
+    panInput.value = 'ABCDE1234F';
+    panInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.disabled).toBe(false);
+  });
 });
