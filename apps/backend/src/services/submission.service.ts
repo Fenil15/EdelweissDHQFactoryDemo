@@ -3,6 +3,21 @@ import { Submission } from '../entities/submission.entity';
 import { Vendor } from '../entities/vendor.entity';
 
 /**
+ * Loads a submission only if it belongs to the given vendor. Returning null
+ * when ownership fails (rather than throwing or returning the row) lets
+ * callers respond with a `404` without leaking row existence.
+ */
+export async function findSubmissionOwnedBy(
+  submissionId: string,
+  vendorId: string,
+): Promise<Submission | null> {
+  const repo = AppDataSource.getRepository(Submission);
+  const row = await repo.findOneBy({ id: submissionId });
+  if (!row || row.vendorId !== vendorId) return null;
+  return row;
+}
+
+/**
  * Resolve the Vendor row that belongs to the given user. Auto-provisions a
  * Vendor row on first call so that newly-invited vendors can immediately
  * start a submission without an explicit "create vendor profile" step.
