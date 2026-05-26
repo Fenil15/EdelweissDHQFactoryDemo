@@ -337,9 +337,22 @@ export class SubmissionFormComponent {
 
   goNext(): void {
     if (!this.canAdvance()) return;
+    if (this.currentKey() === 'review') {
+      this.submitReview();
+      return;
+    }
     const next = Math.min(this.totalSteps - 1, this.stepIndex() + 1);
     this.stepIndex.set(next);
     this.persistDraft(next + 1);
+  }
+
+  private submitReview(): void {
+    if (!this.submissionId) return;
+    this.submissions.submitDraft(this.submissionId).subscribe({
+      next: () => {
+        this.router.navigateByUrl('/vendor');
+      },
+    });
   }
 
   saveDraft(): void {
