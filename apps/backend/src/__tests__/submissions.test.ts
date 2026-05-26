@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppDataSource } from '../db/data-source';
 import { User, type UserRole } from '../entities/user.entity';
 import { Vendor } from '../entities/vendor.entity';
+import { Submission } from '../entities/submission.entity';
 import { createApp } from '../app';
 
 const JWT_SECRET = process.env.JWT_SECRET ?? 'test-secret';
@@ -145,6 +146,116 @@ describe('GET /api/submissions/:id', () => {
     const res = await request(app)
       .get('/api/submissions/00000000-0000-0000-0000-000000000000')
       .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('PUT /api/submissions/:id', () => {
+  beforeAll(async () => {
+    await AppDataSource.initialize();
+  });
+  afterAll(async () => {
+    await AppDataSource.destroy();
+  });
+  beforeEach(async () => {
+    await AppDataSource.synchronize(true);
+  });
+
+  async function createDraftAsVendor(): Promise<{ id: string; token: string; user: User }> {
+    const app = createApp();
+    const { user } = await seedVendor();
+    const token = tokenFor(user.id, 'vendor');
+    const created = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    return { id: created.body.id, token, user };
+  }
+
+  it('owner updates a Draft with valid format fields → 200 + merged body', async () => {
+    const app = createApp();
+    const { id, token } = await createDraftAsVendor();
+
+    const res = await request(app)
+      .put(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        currentStep: 2,
+        formDataJson: {
+          companyInfo: {
+            companyName: 'Acme Ltd',
+            panNumber: 'ABCDE1234F',
+          },
+        },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id,
+      status: 'Draft',
+      currentStep: 2,
+      formDataJson: {
+        companyInfo: { companyName: 'Acme Ltd', panNumber: 'ABCDE1234F' },
+      },
+    });
+  });
+
+  it('rejects invalid PAN with 400 + field error map', async () => {
+    const app = createApp();
+    const { id, token } = await createDraftAsVendor();
+
+    const res = await request(app)
+      .put(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        formDataJson: {
+          companyInfo: { panNumber: 'INVALID' },
+          banking: { ifsc: 'WRONG' },
+          taxIds: { gstin: 'WRONG' },
+          address: { pin: '012345' },
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      error: 'invalid_format',
+      errors: {
+        panNumber: 'invalid_pan',
+        ifsc: 'invalid_ifsc',
+        gstin: 'invalid_gstin',
+        pin: 'invalid_pin',
+      },
+    });
+  });
+
+  it('rejects PUT when status is not Draft with 409 invalid_status', async () => {
+    const app = createApp();
+    const { id, token } = await createDraftAsVendor();
+
+    // Promote the row to In-Process directly via the repository.
+    const repo = AppDataSource.getRepository(Submission);
+    await repo.update({ id }, { status: 'In-Process' });
+
+    const res = await request(app)
+      .put(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ formDataJson: { companyInfo: { companyName: 'x' } } });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: 'invalid_status' });
+  });
+
+  it('non-owner gets 404 (no leak)', async () => {
+    const app = createApp();
+    const { id } = await createDraftAsVendor();
+    const { user: otherUser } = await seedVendor('other@example.com');
+    const otherToken = tokenFor(otherUser.id, 'vendor');
+
+    const res = await request(app)
+      .put(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ formDataJson: {} });
+
     expect(res.status).toBe(404);
   });
 });
