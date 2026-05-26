@@ -169,6 +169,27 @@ describe('SubmissionFormComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Step 2 of 7');
   });
 
+  it('CTA reads "Next" on early steps', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft();
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Next');
+  });
+
+  it('CTA reads "Submit" on the Review step', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    // Resume directly at the review step (index 6, currentStep 7).
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
+    expect(next.textContent?.trim()).toBe('Submit');
+  });
+
   it('hydrates from saved currentStep when resuming a draft', () => {
     const fixture = TestBed.createComponent(SubmissionFormComponent);
     fixture.detectChanges();
