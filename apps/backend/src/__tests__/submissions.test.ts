@@ -259,3 +259,63 @@ describe('PUT /api/submissions/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('GET /api/submissions', () => {
+  beforeAll(async () => {
+    await AppDataSource.initialize();
+  });
+  afterAll(async () => {
+    await AppDataSource.destroy();
+  });
+  beforeEach(async () => {
+    await AppDataSource.synchronize(true);
+  });
+
+  it('lists only the current vendor’s drafts when status=Draft', async () => {
+    const app = createApp();
+    const { user: ownerUser } = await seedVendor('o@example.com');
+    const { user: otherUser } = await seedVendor('x@example.com');
+    const ownerToken = tokenFor(ownerUser.id, 'vendor');
+    const otherToken = tokenFor(otherUser.id, 'vendor');
+
+    // owner: two drafts (one we keep Draft, one we promote)
+    const d1 = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({});
+    const d2 = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({});
+    // other vendor: one draft (must NOT appear in owner's list)
+    await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({});
+
+    // Promote d2 to In-Process so the ?status=Draft filter excludes it.
+    const repo = AppDataSource.getRepository(Submission);
+    await repo.update({ id: d2.body.id }, { status: 'In-Process' });
+
+    const res = await request(app)
+      .get('/api/submissions?status=Draft')
+      .set('Authorization', `Bearer ${ownerToken}`);
+
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({ id: d1.body.id, status: 'Draft' });
+  });
+
+  it('without filter returns all of the current vendor’s submissions', async () => {
+    const app = createApp();
+    const { user } = await seedVendor();
+    const token = tokenFor(user.id, 'vendor');
+    await request(app).post('/api/submissions').set('Authorization', `Bearer ${token}`).send({});
+    await request(app).post('/api/submissions').set('Authorization', `Bearer ${token}`).send({});
+
+    const res = await request(app).get('/api/submissions').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+  });
+});
