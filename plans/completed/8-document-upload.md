@@ -45,7 +45,7 @@ issue #7) can drop it in via a simple import.
   criteria doesn't restrict this, but for the form flow only vendors will
   upload — we still 403 a vendor uploading to another vendor's submission).
 - multer single-file (`file` field), memory storage, `limits.fileSize =
-  5*1024*1024`.
+5*1024*1024`.
 - Multer's `fileSize` limit error → 413 `{ error: 'file_too_large' }`.
 - MIME check: extension from `fileName`, declared `mimetype`, AND first-bytes
   sniff must all agree on one of pdf/jpeg/png. Else 415
@@ -92,7 +92,7 @@ issue #7) can drop it in via a simple import.
 - Standalone Angular component. `@Input() submissionId!: string`.
 - Drag-or-click drop zone (Tailwind, no extra deps). `input[type=file]`
   hidden behind a label for click. Drag events: `dragenter / dragleave / dragover /
-  drop` to handle drop and visual highlight.
+drop` to handle drop and visual highlight.
 - Client-side validation before calling the service:
   - Size > 5 MB → inline error, no upload.
   - MIME not in pdf/jpeg/png → inline error, no upload.
@@ -121,7 +121,7 @@ Backend (Jest + supertest, real Postgres):
 5. POST with 6 MB file → 413, no row, no file written.
 6. GET `/api/documents/:id` by owning vendor → 200, body bytes match, correct
    Content-Type.
-7. GET `/api/documents/:id` by a *different* vendor → 403.
+7. GET `/api/documents/:id` by a _different_ vendor → 403.
 8. GET `/api/documents/:id` by a checker → 200.
 9. GET `/api/submissions/:id/documents` lists rows for owner / 403 for stranger.
 10. DELETE `/api/documents/:id` on Draft → 204, file removed, row removed.
