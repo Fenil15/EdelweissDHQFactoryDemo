@@ -243,7 +243,7 @@ const STEP_TITLES: Record<StepKey, string> = {
             [disabled]="!canAdvance()"
             (click)="goNext()"
           >
-            Next
+            {{ ctaLabel() }}
           </button>
         </div>
       </div>
@@ -263,6 +263,7 @@ export class SubmissionFormComponent {
   readonly progressPct = computed(() =>
     Math.round(((this.stepIndex() + 1) / this.totalSteps) * 100),
   );
+  readonly ctaLabel = computed(() => (this.currentKey() === 'review' ? 'Submit' : 'Next'));
 
   private submissionId: string | null = null;
 
