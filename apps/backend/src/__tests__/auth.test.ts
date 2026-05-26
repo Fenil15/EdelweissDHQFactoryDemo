@@ -88,15 +88,21 @@ describe('Auth flow', () => {
         await request(app).post('/api/auth/request-otp').send({ email: 'v@example.com' });
         const realOtp = cap.lastOtp();
 
-        // Three bad attempts
-        for (let i = 0; i < 3; i++) {
+        // First two bad attempts: 401 invalid
+        for (let i = 0; i < 2; i++) {
           const r = await request(app)
             .post('/api/auth/verify-otp')
             .send({ email: 'v@example.com', otp: '000000' });
           expect(r.status).toBe(401);
         }
 
-        // Fourth attempt — even with the correct OTP — must be locked out
+        // Third bad attempt: trips the lockout — must be 423
+        const trip = await request(app)
+          .post('/api/auth/verify-otp')
+          .send({ email: 'v@example.com', otp: '000000' });
+        expect(trip.status).toBe(423);
+
+        // Subsequent attempt — even with the correct OTP — must stay locked
         const locked = await request(app)
           .post('/api/auth/verify-otp')
           .send({ email: 'v@example.com', otp: realOtp });
