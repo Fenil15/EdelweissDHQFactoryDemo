@@ -81,7 +81,7 @@ const ALL_STATUSES: SubmissionStatus[] = [
           </label>
           <button
             type="button"
-            class="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+            class="px-3 py-1 rounded bg-brand hover:bg-brand-dark text-white text-sm"
             (click)="applyFilters()"
             data-testid="apply-btn"
           >
@@ -119,7 +119,7 @@ const ALL_STATUSES: SubmissionStatus[] = [
               <td class="p-2 font-mono text-xs">
                 <a
                   [routerLink]="['/checker', row.id]"
-                  class="text-blue-600 underline"
+                  class="text-brand underline"
                   data-testid="detail-link"
                 >
                   {{ row.id }}

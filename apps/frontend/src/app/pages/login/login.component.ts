@@ -24,7 +24,7 @@ type Step = 'email' | 'otp';
           />
         </label>
         <button
-          class="w-full bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-50"
+          class="w-full bg-brand hover:bg-brand-dark text-white rounded px-3 py-2 disabled:opacity-50"
           [disabled]="pending()"
           (click)="onRequestOtp()"
           data-testid="request-otp-btn"
@@ -51,7 +51,7 @@ type Step = 'email' | 'otp';
           />
         </label>
         <button
-          class="w-full bg-blue-600 text-white rounded px-3 py-2 disabled:opacity-50"
+          class="w-full bg-brand hover:bg-brand-dark text-white rounded px-3 py-2 disabled:opacity-50"
           [disabled]="pending()"
           (click)="onVerifyOtp()"
           data-testid="verify-otp-btn"

@@ -1,10 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import {
-  AuditLogListFilters,
-  AuditLogService,
-} from '../../core/audit/audit-log.service';
+import { AuditLogListFilters, AuditLogService } from '../../core/audit/audit-log.service';
 import { AuditEntry } from '../../core/submission/submission.service';
 
 const ACTIONS = ['submit', 'approve', 'reject', 'request-modification'] as const;
@@ -59,23 +56,15 @@ const PAGE_SIZE = 50;
           </label>
           <label class="block">
             <span class="text-xs text-gray-600">From</span>
-            <input
-              type="date"
-              class="border rounded px-2 py-1 text-sm"
-              [(ngModel)]="dateFrom"
-            />
+            <input type="date" class="border rounded px-2 py-1 text-sm" [(ngModel)]="dateFrom" />
           </label>
           <label class="block">
             <span class="text-xs text-gray-600">To</span>
-            <input
-              type="date"
-              class="border rounded px-2 py-1 text-sm"
-              [(ngModel)]="dateTo"
-            />
+            <input type="date" class="border rounded px-2 py-1 text-sm" [(ngModel)]="dateTo" />
           </label>
           <button
             type="button"
-            class="px-3 py-1 rounded bg-blue-600 text-white text-sm"
+            class="px-3 py-1 rounded bg-brand hover:bg-brand-dark text-white text-sm"
             (click)="applyFilters()"
             data-testid="apply-btn"
           >

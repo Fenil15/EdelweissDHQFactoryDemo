@@ -16,7 +16,7 @@ import { AuditEntry, SubmissionService } from '../../core/submission/submission.
   template: `
     <div class="max-w-3xl mx-auto p-6 space-y-6">
       <div class="flex items-center gap-3">
-        <a routerLink="/vendor" class="text-sm text-blue-600 underline">← Back</a>
+        <a routerLink="/vendor" class="text-sm text-brand underline">← Back</a>
         <h1 class="text-2xl font-semibold">Submission timeline</h1>
       </div>
 

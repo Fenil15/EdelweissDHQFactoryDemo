@@ -31,7 +31,7 @@ const DECISION_LABELS: Record<DecisionAction, string> = {
   template: `
     <div class="max-w-4xl mx-auto p-6 space-y-6">
       <div class="flex items-center gap-3">
-        <a routerLink="/checker" class="text-sm text-blue-600 underline">← Back</a>
+        <a routerLink="/checker" class="text-sm text-brand underline">← Back</a>
         <h1 class="text-2xl font-semibold">Submission</h1>
         @if (submission(); as s) {
           <app-status-badge [status]="s.status" />
@@ -67,7 +67,7 @@ const DECISION_LABELS: Record<DecisionAction, string> = {
                 <li class="flex items-center justify-between p-2" data-testid="document-row">
                   <span class="text-sm">{{ doc.fileName }}</span>
                   <a
-                    class="text-sm text-blue-600 underline"
+                    class="text-sm text-brand underline"
                     [href]="downloadUrl(doc.id)"
                     target="_blank"
                     rel="noopener"
@@ -86,7 +86,7 @@ const DECISION_LABELS: Record<DecisionAction, string> = {
               <button
                 type="button"
                 class="px-3 py-1 rounded border text-sm"
-                [class.bg-blue-600]="selectedAction() === a"
+                [class.bg-brand]="selectedAction() === a"
                 [class.text-white]="selectedAction() === a"
                 (click)="selectedAction.set(a)"
                 [attr.data-testid]="'action-' + a"
@@ -115,7 +115,7 @@ const DECISION_LABELS: Record<DecisionAction, string> = {
           }
           <button
             type="button"
-            class="px-4 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+            class="px-4 py-2 rounded bg-brand hover:bg-brand-dark text-white disabled:opacity-50"
             [disabled]="!canSubmit()"
             (click)="submit()"
             data-testid="submit-decision-btn"
@@ -140,9 +140,7 @@ export class CheckerSubmissionDetailComponent {
   readonly error = signal<string | null>(null);
   readonly success = signal(false);
 
-  readonly canSubmit = computed(
-    () => !!this.selectedAction() && this.comments().trim().length > 0,
-  );
+  readonly canSubmit = computed(() => !!this.selectedAction() && this.comments().trim().length > 0);
 
   private submissionId: string | null = null;
 
@@ -172,16 +170,14 @@ export class CheckerSubmissionDetailComponent {
     const trimmed = this.comments().trim();
     if (trimmed.length === 0) return;
     this.error.set(null);
-    this.submissions
-      .submitDecision(this.submissionId, this.selectedAction()!, trimmed)
-      .subscribe({
-        next: (s) => {
-          this.submission.set(s);
-          this.success.set(true);
-        },
-        error: (err: { error?: { error?: string } }) => {
-          this.error.set(err?.error?.error ?? 'Decision failed.');
-        },
-      });
+    this.submissions.submitDecision(this.submissionId, this.selectedAction()!, trimmed).subscribe({
+      next: (s) => {
+        this.submission.set(s);
+        this.success.set(true);
+      },
+      error: (err: { error?: { error?: string } }) => {
+        this.error.set(err?.error?.error ?? 'Decision failed.');
+      },
+    });
   }
 }
