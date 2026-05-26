@@ -6,6 +6,7 @@ import {
   createDraftForVendor,
   findSubmissionOwnedBy,
   getOrCreateVendorForUser,
+  listSubmissionsForAllVendors,
   listSubmissionsForVendor,
   updateDraft,
 } from '../services/submission.service';
@@ -33,6 +34,33 @@ function parseStatusFilter(value: unknown): SubmissionStatus | undefined {
     : undefined;
 }
 
+/**
+ * Parse `?status=` for the cross-vendor list. Accepts a comma-separated list
+ * (`?status=Draft,In-Process`) or repeated params (`?status=Draft&status=In-Process`),
+ * dropping anything that isn't a valid SubmissionStatus.
+ */
+function parseStatusesFilter(value: unknown): SubmissionStatus[] {
+  const collected: string[] = [];
+  if (typeof value === 'string') {
+    for (const part of value.split(',')) collected.push(part.trim());
+  } else if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === 'string') {
+        for (const part of item.split(',')) collected.push(part.trim());
+      }
+    }
+  }
+  return collected.filter((s): s is SubmissionStatus =>
+    (SUBMISSION_STATUSES as readonly string[]).includes(s),
+  );
+}
+
+function parseDate(value: unknown): Date | undefined {
+  if (typeof value !== 'string' || value.trim().length === 0) return undefined;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 const router = Router();
 
 // Every endpoint requires a valid JWT. Role gating is per-route so that
@@ -40,10 +68,11 @@ const router = Router();
 // (/decision) can live under the same mount.
 router.use(requireJwt);
 
-function serialize(s: Submission) {
+function serialize(s: Submission, vendorName?: string | null) {
   return {
     id: s.id,
     vendorId: s.vendorId,
+    vendorName: vendorName ?? null,
     status: s.status,
     currentStep: s.currentStep,
     formDataJson: s.formDataJson,
@@ -52,12 +81,31 @@ function serialize(s: Submission) {
   };
 }
 
-router.get('/', requireRole('vendor'), async (req: Request, res: Response): Promise<void> => {
-  const userId = req.user!.userId;
-  const vendor = await getOrCreateVendorForUser(userId);
-  const status = parseStatusFilter(req.query.status);
-  const rows = await listSubmissionsForVendor(vendor.id, status);
-  res.status(200).json(rows.map(serialize));
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const role = req.user!.role;
+  if (role === 'vendor') {
+    const userId = req.user!.userId;
+    const vendor = await getOrCreateVendorForUser(userId);
+    const status = parseStatusFilter(req.query.status);
+    const rows = await listSubmissionsForVendor(vendor.id, status);
+    res.status(200).json(rows.map((r) => serialize(r, vendor.companyName)));
+    return;
+  }
+  // checker / admin: cross-vendor list with filters.
+  const statuses = parseStatusesFilter(req.query.status);
+  const vendorName = typeof req.query.vendorName === 'string' ? req.query.vendorName : undefined;
+  const submissionId =
+    typeof req.query.submissionId === 'string' ? req.query.submissionId : undefined;
+  const dateFrom = parseDate(req.query.dateFrom);
+  const dateTo = parseDate(req.query.dateTo);
+  const rows = await listSubmissionsForAllVendors({
+    statuses: statuses.length > 0 ? statuses : undefined,
+    vendorName,
+    submissionId,
+    dateFrom,
+    dateTo,
+  });
+  res.status(200).json(rows.map((r) => serialize(r, r.vendorName)));
 });
 
 router.post('/', requireRole('vendor'), async (req: Request, res: Response): Promise<void> => {

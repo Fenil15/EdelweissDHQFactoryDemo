@@ -14,6 +14,60 @@ export async function listSubmissionsForVendor(
 }
 
 /**
+ * Cross-vendor filter shape used by the checker / admin dashboards. Every
+ * field is optional. The query is intentionally narrow — POC scope.
+ */
+export interface SubmissionListFilters {
+  statuses?: SubmissionStatus[];
+  vendorName?: string;
+  submissionId?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
+/**
+ * Cross-vendor list for checker / admin role. Joins the Vendor row so the
+ * UI can show company name without an N+1, and applies the optional filter
+ * predicates against status, vendor name, submission id and createdAt range.
+ */
+export async function listSubmissionsForAllVendors(
+  filters: SubmissionListFilters,
+): Promise<Array<Submission & { vendorName: string | null }>> {
+  const repo = AppDataSource.getRepository(Submission);
+  const qb = repo
+    .createQueryBuilder('s')
+    .leftJoin(Vendor, 'v', 'v.id = s.vendorId')
+    .addSelect('v.companyName', 's_vendorName')
+    .orderBy('s.updatedAt', 'DESC');
+
+  if (filters.statuses && filters.statuses.length > 0) {
+    qb.andWhere('s.status IN (:...statuses)', { statuses: filters.statuses });
+  }
+  if (filters.vendorName && filters.vendorName.trim().length > 0) {
+    qb.andWhere('LOWER(v.companyName) LIKE :vendorName', {
+      vendorName: `%${filters.vendorName.trim().toLowerCase()}%`,
+    });
+  }
+  if (filters.submissionId && filters.submissionId.trim().length > 0) {
+    qb.andWhere('CAST(s.id AS TEXT) LIKE :sid', {
+      sid: `%${filters.submissionId.trim().toLowerCase()}%`,
+    });
+  }
+  if (filters.dateFrom) {
+    qb.andWhere('s.createdAt >= :dateFrom', { dateFrom: filters.dateFrom });
+  }
+  if (filters.dateTo) {
+    qb.andWhere('s.createdAt <= :dateTo', { dateTo: filters.dateTo });
+  }
+
+  const rows = await qb.getRawAndEntities();
+  return rows.entities.map((entity, idx) => {
+    const raw = rows.raw[idx] as { s_vendorName?: string | null };
+    return Object.assign(entity, { vendorName: raw?.s_vendorName ?? null });
+  });
+}
+
+/**
  * Loads a submission only if it belongs to the given vendor. Returning null
  * when ownership fails (rather than throwing or returning the row) lets
  * callers respond with a `404` without leaking row existence.
