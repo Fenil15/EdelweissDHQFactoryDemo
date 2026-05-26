@@ -68,3 +68,83 @@ describe('POST /api/submissions', () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe('GET /api/submissions/:id', () => {
+  beforeAll(async () => {
+    await AppDataSource.initialize();
+  });
+  afterAll(async () => {
+    await AppDataSource.destroy();
+  });
+  beforeEach(async () => {
+    await AppDataSource.synchronize(true);
+  });
+
+  it('owner can fetch their own draft', async () => {
+    const app = createApp();
+    const { user, vendor } = await seedVendor();
+    const token = tokenFor(user.id, 'vendor');
+
+    const created = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    const id = created.body.id;
+
+    const res = await request(app)
+      .get(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id, vendorId: vendor.id, status: 'Draft' });
+  });
+
+  it('another vendor reading the same id gets 404 (no leak)', async () => {
+    const app = createApp();
+    const { user: ownerUser } = await seedVendor('owner@example.com');
+    const { user: otherUser } = await seedVendor('other@example.com');
+    const ownerToken = tokenFor(ownerUser.id, 'vendor');
+    const otherToken = tokenFor(otherUser.id, 'vendor');
+
+    const created = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({});
+    const id = created.body.id;
+
+    const res = await request(app)
+      .get(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${otherToken}`);
+    expect(res.status).toBe(404);
+  });
+
+  it('admin role gets 403 (role gate, not 404)', async () => {
+    const app = createApp();
+    const { user: vendorUser } = await seedVendor();
+    const userRepo = AppDataSource.getRepository(User);
+    const admin = await userRepo.save({ email: 'a@example.com', role: 'admin' });
+    const vendorToken = tokenFor(vendorUser.id, 'vendor');
+    const adminToken = tokenFor(admin.id, 'admin');
+
+    const created = await request(app)
+      .post('/api/submissions')
+      .set('Authorization', `Bearer ${vendorToken}`)
+      .send({});
+    const id = created.body.id;
+
+    const res = await request(app)
+      .get(`/api/submissions/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+    expect(res.status).toBe(403);
+  });
+
+  it('unknown id (well-formed uuid) returns 404 for a vendor', async () => {
+    const app = createApp();
+    const { user } = await seedVendor();
+    const token = tokenFor(user.id, 'vendor');
+
+    const res = await request(app)
+      .get('/api/submissions/00000000-0000-0000-0000-000000000000')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(404);
+  });
+});
