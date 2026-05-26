@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { of } from 'rxjs';
 
@@ -188,6 +188,34 @@ describe('SubmissionFormComponent', () => {
 
     const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
     expect(next.textContent?.trim()).toBe('Submit');
+  });
+
+  it('clicking Submit on Review POSTs /api/submissions/:id/submit and navigates to /vendor on success', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({ currentStep: 7 });
+    fixture.detectChanges();
+
+    const router = TestBed.inject(Router);
+    const navSpy = jest.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+
+    fixture.nativeElement.querySelector('[data-testid="next-btn"]').click();
+    fixture.detectChanges();
+
+    const post = httpMock.expectOne(
+      (r) => r.method === 'POST' && r.url === '/api/submissions/s1/submit',
+    );
+    expect(post.request.body).toEqual({});
+    post.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'In-Process',
+      currentStep: 7,
+      formDataJson: {},
+    });
+    fixture.detectChanges();
+
+    expect(navSpy).toHaveBeenCalledWith('/vendor');
   });
 
   it('hydrates from saved currentStep when resuming a draft', () => {
