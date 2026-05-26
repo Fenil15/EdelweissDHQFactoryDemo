@@ -38,3 +38,48 @@ export async function createDraftForVendor(vendorId: string): Promise<Submission
     currentStep: 1,
   });
 }
+
+/**
+ * Shallow-merges incoming `formDataJson` into the persisted JSON by section,
+ * so a PUT carrying only `{ companyInfo: { … } }` does not clobber other
+ * sections that were saved on an earlier step.
+ */
+export function mergeFormData(
+  existing: Record<string, unknown>,
+  incoming: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existing };
+  for (const [section, value] of Object.entries(incoming)) {
+    const prior = out[section];
+    if (
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      prior &&
+      typeof prior === 'object' &&
+      !Array.isArray(prior)
+    ) {
+      out[section] = {
+        ...(prior as Record<string, unknown>),
+        ...(value as Record<string, unknown>),
+      };
+    } else {
+      out[section] = value;
+    }
+  }
+  return out;
+}
+
+export async function updateDraft(
+  submission: Submission,
+  patch: { formDataJson?: Record<string, unknown>; currentStep?: number },
+): Promise<Submission> {
+  const repo = AppDataSource.getRepository(Submission);
+  if (patch.formDataJson !== undefined) {
+    submission.formDataJson = mergeFormData(submission.formDataJson ?? {}, patch.formDataJson);
+  }
+  if (typeof patch.currentStep === 'number') {
+    submission.currentStep = patch.currentStep;
+  }
+  return repo.save(submission);
+}

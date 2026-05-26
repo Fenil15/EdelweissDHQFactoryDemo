@@ -5,7 +5,9 @@ import {
   createDraftForVendor,
   findSubmissionOwnedBy,
   getOrCreateVendorForUser,
+  updateDraft,
 } from '../services/submission.service';
+import { validateFormatFields } from '../services/format-validators';
 
 const router = Router();
 
@@ -40,6 +42,35 @@ router.get('/:id', async (req: Request<{ id: string }>, res: Response): Promise<
     return;
   }
   res.status(200).json(serialize(submission));
+});
+
+router.put('/:id', async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+  const userId = req.user!.userId;
+  const vendor = await getOrCreateVendorForUser(userId);
+  const submission = await findSubmissionOwnedBy(req.params.id, vendor.id);
+  if (!submission) {
+    res.status(404).json({ error: 'not_found' });
+    return;
+  }
+  if (submission.status !== 'Draft') {
+    res.status(409).json({ error: 'invalid_status' });
+    return;
+  }
+  const body = (req.body ?? {}) as { formDataJson?: unknown; currentStep?: unknown };
+  const formDataJson =
+    body.formDataJson && typeof body.formDataJson === 'object' && !Array.isArray(body.formDataJson)
+      ? (body.formDataJson as Record<string, unknown>)
+      : undefined;
+  if (formDataJson) {
+    const errors = validateFormatFields(formDataJson);
+    if (Object.keys(errors).length > 0) {
+      res.status(400).json({ error: 'invalid_format', errors });
+      return;
+    }
+  }
+  const currentStep = typeof body.currentStep === 'number' ? body.currentStep : undefined;
+  const updated = await updateDraft(submission, { formDataJson, currentStep });
+  res.status(200).json(serialize(updated));
 });
 
 export default router;
