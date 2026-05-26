@@ -15,7 +15,7 @@ Bring the workflow UI together end-to-end:
   payload + attached documents + decision panel with three buttons (Approve /
   Reject / Request Modification) and a mandatory Comments textarea. Submit is
   disabled when comments are empty; calls `POST /api/submissions/:id/decision`.
-- **Vendor dashboard upgrade (`/vendor`)**: list now shows *all* the vendor's
+- **Vendor dashboard upgrade (`/vendor`)**: list now shows _all_ the vendor's
   submissions (not only Drafts) with status badges (Draft, In-Process,
   Completed, Rejected, Modification-Required), color-coded. Each row links to a
   per-submission timeline.
@@ -72,7 +72,7 @@ Bring the workflow UI together end-to-end:
 - RBAC: vendor must own the submission (else 404); checker/admin allowed on
   any.
 - Response: `[{ id, action, fromStatus, toStatus, comments, actorUserId,
-  actorEmail, createdAt }]`. We include `actorEmail` so the UI can show "who"
+actorEmail, createdAt }]`. We include `actorEmail` so the UI can show "who"
   without an extra round-trip.
 
 ### `GET /api/audit-logs` (admin-only)

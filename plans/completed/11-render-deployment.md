@@ -24,6 +24,7 @@ This slice touches **infra/config only**; no application logic changes.
 ## Files to create / modify
 
 ### 1. `apps/backend/Dockerfile` (new)
+
 Multi-stage, built from the repo root (so npm workspaces resolve):
 
 - Stage `deps`: `node:20-alpine`, copy root `package.json`, `package-lock.json`, `apps/backend/package.json`, `apps/frontend/package.json` (workspace lockfile requires both manifests), run `npm ci`.
@@ -31,6 +32,7 @@ Multi-stage, built from the repo root (so npm workspaces resolve):
 - Stage `runtime`: `node:20-alpine`, `WORKDIR /app`, copy `package.json`/`package-lock.json`/workspace manifests, run `npm ci --omit=dev --workspaces --include-workspace-root=false` (or simpler: `npm ci --omit=dev`), copy `apps/backend/dist` → `/app/apps/backend/dist`, set `NODE_ENV=production`, `STORAGE_DIR=/data/uploads`, `PORT=3000`, `EXPOSE 3000`, `CMD ["node", "apps/backend/dist/index.js"]`.
 
 ### 2. `apps/frontend/Dockerfile` (new)
+
 Multi-stage, also built from repo root:
 
 - Stage `deps`: `node:20-alpine`, `npm ci` at the workspace root.
@@ -38,6 +40,7 @@ Multi-stage, also built from repo root:
 - Stage `runtime`: `nginx:alpine`, copy `dist/frontend/browser` → `/usr/share/nginx/html`, copy `nginx.conf` → `/etc/nginx/conf.d/default.conf`, `EXPOSE 80`.
 
 ### 3. `apps/frontend/nginx.conf` (new)
+
 Single `server { listen 80; ... }`:
 
 - `root /usr/share/nginx/html;`
@@ -47,6 +50,7 @@ Single `server { listen 80; ... }`:
 - Gzip on for text assets.
 
 ### 4. `docker-compose.yml` (modified)
+
 Add `backend` and `frontend` services to the existing `db`:
 
 - `backend`:
@@ -66,9 +70,11 @@ Add `backend` and `frontend` services to the existing `db`:
 (Issue spec says frontend exposes 8080 — keep that.)
 
 ### 5. `.dockerignore` at repo root (new)
+
 Exclude `node_modules`, `**/node_modules`, `**/dist`, `**/.git`, `**/.env*` (except example), `logs`, `plans`, `.claude` to keep image context small and avoid leaking secrets.
 
 ### 6. `render.yaml` (new) — Blueprint at repo root
+
 Spec (Render's blueprint schema):
 
 ```yaml
@@ -116,11 +122,13 @@ services:
 ```
 
 Notes:
+
 - Render's Node runtime sets `PORT` automatically; we keep `process.env.PORT ?? 3000` working.
 - Static site rewrite to backend's `*.onrender.com` is the pragmatic POC posture (service URL is predictable from name). We document this assumption in the README so the user can adjust if Render generates a different hostname.
 - Free Postgres tier is fine for POC; user can switch to starter.
 
 ### 7. `README.md` (modified)
+
 Add new sections per acceptance criteria:
 
 - **Prerequisites**: Node 20 LTS, npm, Docker (for compose path), a Render account (for deploy).
