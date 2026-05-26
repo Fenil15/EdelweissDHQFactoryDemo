@@ -17,7 +17,7 @@ import {
   type StateAction,
   nextStatus,
 } from '../services/submission-state-machine';
-import { writeTransition } from '../services/audit-log.service';
+import { listAuditTrailForSubmission, writeTransition } from '../services/audit-log.service';
 import { emailService } from '../services/email.service';
 
 const SUBMISSION_STATUSES: readonly SubmissionStatus[] = [
@@ -223,6 +223,36 @@ router.post(
     await emailService.notifyCheckersOfNewSubmission(submission);
 
     res.status(200).json(serialize(submission));
+  },
+);
+
+/**
+ * GET /api/submissions/:id/audit
+ * Vendor can read only their own; checker/admin can read any. Returns the
+ * audit trail in chronological order, each row enriched with `actorEmail`.
+ */
+router.get(
+  '/:id/audit',
+  async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    const role = req.user!.role;
+    const userId = req.user!.userId;
+    const submissionRepo = AppDataSource.getRepository(Submission);
+    const submission = await submissionRepo.findOneBy({ id: req.params.id });
+    if (!submission) {
+      res.status(404).json({ error: 'not_found' });
+      return;
+    }
+    if (role === 'vendor') {
+      const vendor = await AppDataSource.getRepository(Vendor).findOneBy({
+        id: submission.vendorId,
+      });
+      if (!vendor || vendor.userId !== userId) {
+        res.status(404).json({ error: 'not_found' });
+        return;
+      }
+    }
+    const trail = await listAuditTrailForSubmission(req.params.id);
+    res.status(200).json(trail);
   },
 );
 
