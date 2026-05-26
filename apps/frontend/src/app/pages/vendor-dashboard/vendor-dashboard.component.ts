@@ -13,7 +13,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.com
       <div class="flex items-center justify-between">
         <h1 class="text-2xl font-semibold">Vendor dashboard</h1>
         <button
-          class="px-3 py-2 rounded bg-blue-600 text-white"
+          class="px-3 py-2 rounded bg-brand hover:bg-brand-dark text-white"
           data-testid="start-new-btn"
           (click)="startNew()"
         >
@@ -41,7 +41,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.com
               <div class="flex items-center gap-3">
                 <a
                   [routerLink]="['/vendor/submissions', s.id, 'timeline']"
-                  class="text-sm text-blue-600 underline"
+                  class="text-sm text-brand underline"
                   data-testid="timeline-link"
                 >
                   Timeline
@@ -49,7 +49,7 @@ import { StatusBadgeComponent } from '../../shared/status-badge/status-badge.com
                 @if (canResume(s)) {
                   <a
                     [routerLink]="['/vendor/submissions', s.id]"
-                    class="text-sm text-blue-600 underline"
+                    class="text-sm text-brand underline"
                     data-testid="resume-link"
                   >
                     Resume

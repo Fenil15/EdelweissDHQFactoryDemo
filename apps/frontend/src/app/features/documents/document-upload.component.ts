@@ -38,7 +38,7 @@ function humanSize(bytes: number): string {
       >
         <p class="text-sm text-gray-600">Drag a file here, or</p>
         <label
-          class="inline-block mt-2 bg-blue-600 text-white text-sm rounded px-3 py-1 cursor-pointer hover:bg-blue-700"
+          class="inline-block mt-2 bg-brand text-white text-sm rounded px-3 py-1 cursor-pointer hover:bg-brand-dark"
         >
           Choose a file
           <input

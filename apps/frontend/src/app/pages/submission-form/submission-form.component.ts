@@ -51,7 +51,7 @@ const STEP_TITLES: Record<StepKey, string> = {
         </div>
         <div class="w-full h-2 bg-gray-200 rounded">
           <div
-            class="h-2 bg-blue-600 rounded transition-all"
+            class="h-2 bg-brand rounded transition-all"
             data-testid="progress-bar"
             [style.width.%]="progressPct()"
           ></div>
@@ -238,7 +238,7 @@ const STEP_TITLES: Record<StepKey, string> = {
             Save as Draft
           </button>
           <button
-            class="px-3 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
+            class="px-3 py-2 rounded bg-brand hover:bg-brand-dark text-white disabled:opacity-50"
             data-testid="next-btn"
             [disabled]="!canAdvance()"
             (click)="goNext()"
