@@ -93,6 +93,10 @@ export class SubmissionService {
     return this.http.get<Submission>(`/api/submissions/${id}`);
   }
 
+  submitDraft(id: string): Observable<Submission> {
+    return this.http.post<Submission>(`/api/submissions/${id}/submit`, {});
+  }
+
   submitDecision(id: string, action: DecisionAction, comments: string): Observable<Submission> {
     return this.http.post<Submission>(`/api/submissions/${id}/decision`, { action, comments });
   }
