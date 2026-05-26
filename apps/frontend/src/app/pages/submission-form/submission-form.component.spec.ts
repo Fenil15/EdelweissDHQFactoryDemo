@@ -130,4 +130,55 @@ describe('SubmissionFormComponent', () => {
     const next: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="next-btn"]');
     expect(next.disabled).toBe(false);
   });
+
+  it('clicking Next on a valid step issues PUT /api/submissions/:id with the patch', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft();
+    fixture.detectChanges();
+
+    const nameInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="companyName-input"]',
+    );
+    const panInput: HTMLInputElement = fixture.nativeElement.querySelector(
+      '[data-testid="panNumber-input"]',
+    );
+    nameInput.value = 'Acme';
+    nameInput.dispatchEvent(new Event('input'));
+    panInput.value = 'ABCDE1234F';
+    panInput.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="next-btn"]').click();
+    fixture.detectChanges();
+
+    const put = httpMock.expectOne((r) => r.method === 'PUT' && r.url === '/api/submissions/s1');
+    expect(put.request.body.currentStep).toBe(2);
+    expect(put.request.body.formDataJson.companyInfo).toEqual(
+      expect.objectContaining({ companyName: 'Acme', panNumber: 'ABCDE1234F' }),
+    );
+    put.flush({
+      id: 's1',
+      vendorId: 'v1',
+      status: 'Draft',
+      currentStep: 2,
+      formDataJson: { companyInfo: { companyName: 'Acme', panNumber: 'ABCDE1234F' } },
+    });
+
+    // Indicator advanced to step 2.
+    expect(fixture.nativeElement.textContent).toContain('Step 2 of 7');
+  });
+
+  it('hydrates from saved currentStep when resuming a draft', () => {
+    const fixture = TestBed.createComponent(SubmissionFormComponent);
+    fixture.detectChanges();
+    flushDraft({
+      currentStep: 4,
+      formDataJson: { taxIds: { gstin: '27ABCDE1234F1Z5' } },
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Step 4 of 7');
+    expect(fixture.nativeElement.textContent).toContain('Tax IDs');
+  });
 });
